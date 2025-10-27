@@ -10,30 +10,30 @@ class ChatApp {
         this.sessionId = this.generateSessionId();
         this.lastMessageId = 0;
         this.pollingInterval = null;
-        
+
         this.initializeEventListeners();
         this.loadChatHistory();
         this.createSession();
         this.startPolling();
     }
-    
+
     generateSessionId() {
         return 'session_' + Math.random().toString(36).substr(2, 9);
     }
-    
+
     initializeEventListeners() {
         this.sendButton.addEventListener('click', () => this.sendMessage());
         this.messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.sendMessage();
         });
-        
+
         // Auto-resize input
         this.messageInput.addEventListener('input', () => {
             this.messageInput.style.height = 'auto';
             this.messageInput.style.height = this.messageInput.scrollHeight + 'px';
         });
     }
-    
+
     async createSession() {
         try {
             const response = await fetch('/api/session/create', {
@@ -43,9 +43,9 @@ class ChatApp {
                 },
                 body: JSON.stringify({ sessionId: this.sessionId })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 this.sessionId = data.sessionId;
                 console.log('Session created:', data.sessionId);
@@ -54,18 +54,18 @@ class ChatApp {
             console.error('Error creating session:', error);
         }
     }
-    
+
     async sendMessage() {
         const message = this.messageInput.value.trim();
         if (!message) return;
-        
+
         // Add user message to chat
         this.addMessage(message, 'user');
         this.messageInput.value = '';
-        
+
         // Show typing indicator
         this.showTypingIndicator();
-        
+
         // Send message to server
         try {
             const response = await fetch('/api/chat/send', {
@@ -78,24 +78,24 @@ class ChatApp {
                     sessionId: this.sessionId
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success && data.messageId) {
                 this.lastMessageId = data.messageId;
             }
-            
+
         } catch (error) {
             console.error('Error sending message:', error);
             this.hideTypingIndicator();
             this.addMessage("I'm having trouble connecting right now. Please try again.", 'ai');
         }
     }
-    
+
     addMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message-bubble flex items-start space-x-3';
-        
+
         if (sender === 'user') {
             messageDiv.innerHTML = `
                 <div class="flex-1"></div>
@@ -115,10 +115,10 @@ class ChatApp {
                 </div>
             `;
         }
-        
+
         this.chatContainer.appendChild(messageDiv);
         this.scrollToBottom();
-        
+
         // Animate message appearance
         anime({
             targets: messageDiv,
@@ -128,25 +128,25 @@ class ChatApp {
             easing: 'easeOutQuart'
         });
     }
-    
+
     showTypingIndicator() {
         this.typingIndicator.classList.remove('hidden');
         this.scrollToBottom();
     }
-    
+
     hideTypingIndicator() {
         this.typingIndicator.classList.add('hidden');
     }
-    
+
     scrollToBottom() {
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
-    
+
     async loadChatHistory() {
         try {
             const response = await fetch(`/api/chat/history?sessionId=${this.sessionId}`);
             const data = await response.json();
-            
+
             if (data.messages && data.messages.length > 0) {
                 data.messages.forEach(msg => {
                     this.addMessage(msg.text, msg.sender);
@@ -157,18 +157,18 @@ class ChatApp {
             console.error('Error loading chat history:', error);
         }
     }
-    
+
     startPolling() {
         this.pollingInterval = setInterval(() => {
             this.checkNewMessages();
         }, 2000);
     }
-    
+
     async checkNewMessages() {
         try {
             const response = await fetch(`/api/chat/new-messages?sessionId=${this.sessionId}&lastMessageId=${this.lastMessageId}`);
             const data = await response.json();
-            
+
             if (data.success && data.messages && data.messages.length > 0) {
                 data.messages.forEach(msg => {
                     if (msg.id > this.lastMessageId) {
@@ -182,7 +182,7 @@ class ChatApp {
             console.error('Error checking new messages:', error);
         }
     }
-    
+
     destroy() {
         if (this.pollingInterval) {
             clearInterval(this.pollingInterval);
@@ -198,15 +198,15 @@ class LoginManager {
         this.buttonText = document.getElementById('button-text');
         this.buttonLoading = document.getElementById('button-loading');
         this.messageArea = document.getElementById('message-area');
-        
+
         if (this.form) {
             this.initializeEventListeners();
         }
     }
-    
+
     initializeEventListeners() {
         this.form.addEventListener('submit', (e) => this.handleLogin(e));
-        
+
         // Add input animations
         const inputs = this.form.querySelectorAll('input');
         inputs.forEach(input => {
@@ -218,7 +218,7 @@ class LoginManager {
                     easing: 'easeOutQuart'
                 });
             });
-            
+
             input.addEventListener('blur', () => {
                 anime({
                     targets: input,
@@ -229,24 +229,24 @@ class LoginManager {
             });
         });
     }
-    
+
     async handleLogin(e) {
         e.preventDefault();
-        
+
         const formData = new FormData(this.form);
         const username = formData.get('username');
         const password = formData.get('password');
-        
+
         // Validate input
         if (!username || !password) {
             this.showMessage('Please enter both username and password', 'error');
             return;
         }
-        
+
         // Show loading state
         this.setLoadingState(true);
         this.hideMessage();
-        
+
         try {
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
@@ -258,13 +258,13 @@ class LoginManager {
                     password: password
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (response.ok && data.success) {
                 // Show success message
                 this.showMessage('Login successful! Redirecting to dashboard...', 'success');
-                
+
                 // Animate success
                 anime({
                     targets: this.button,
@@ -273,17 +273,17 @@ class LoginManager {
                     duration: 600,
                     easing: 'easeOutQuart'
                 });
-                
+
                 // Redirect to dashboard
                 setTimeout(() => {
                     window.location.href = '/dashboard.html';
                 }, 1500);
-                
+
             } else {
                 // Show error message
                 this.showMessage(data.message || 'Invalid username or password', 'error');
                 this.setLoadingState(false);
-                
+
                 // Animate error
                 anime({
                     targets: this.form,
@@ -292,14 +292,14 @@ class LoginManager {
                     easing: 'easeOutQuart'
                 });
             }
-            
+
         } catch (error) {
             console.error('Login error:', error);
             this.showMessage('An error occurred. Please try again.', 'error');
             this.setLoadingState(false);
         }
     }
-    
+
     setLoadingState(loading) {
         if (loading) {
             this.button.disabled = true;
@@ -311,7 +311,7 @@ class LoginManager {
             this.buttonLoading.classList.add('hidden');
         }
     }
-    
+
     showMessage(text, type) {
         this.messageArea.innerHTML = `
             <div class="${type}-message rounded-lg p-3 text-sm">
@@ -319,7 +319,7 @@ class LoginManager {
             </div>
         `;
         this.messageArea.classList.remove('hidden');
-        
+
         // Animate message appearance
         anime({
             targets: this.messageArea,
@@ -329,7 +329,7 @@ class LoginManager {
             easing: 'easeOutQuart'
         });
     }
-    
+
     hideMessage() {
         this.messageArea.classList.add('hidden');
     }
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check if we're on the login page
     if (document.getElementById('login-form')) {
         new LoginManager();
-        
+
         // Add entrance animation
         anime({
             targets: '.glass-morphism',
@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
             easing: 'easeOutQuart'
         });
     }
-    
+
     // Check if we're on the chat page
     if (document.getElementById('message-input')) {
         new ChatApp();

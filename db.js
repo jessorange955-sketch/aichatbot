@@ -1,21 +1,84 @@
 const { Pool } = require("pg");
 
-// Create connection pool
-const pool = new Pool({
-  connectionString: process.env.db_POSTGRES_URL || process.env.db_DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
+// Database configuration with fallback hierarchy for Neon DB
+function getDatabaseConfig() {
+  // Primary connection string options (with db_ prefix for production)
+  const connectionString =
+    process.env.db_POSTGRES_URL ||
+    process.env.db_DATABASE_URL ||
+    process.env.db_POSTGRES_URL_NON_POOLING ||
+    process.env.db_DATABASE_URL_UNPOOLED ||
+    // Fallback to standard Vercel/Neon variables
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING;
 
-// Test connection
-pool.on("connect", () => {
-  console.log("Database connected successfully");
+  if (connectionString) {
+    return {
+      connectionString,
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    };
+  }
+
+  // Fallback to individual parameters if connection string not available
+  return {
+    host: process.env.db_PGHOST || process.env.db_POSTGRES_HOST || process.env.POSTGRES_HOST || process.env.PGHOST,
+    port: process.env.db_PGPORT || process.env.POSTGRES_PORT || process.env.PGPORT || 5432,
+    database: process.env.db_PGDATABASE || process.env.db_POSTGRES_DATABASE || process.env.POSTGRES_DATABASE || process.env.PGDATABASE,
+    user: process.env.db_PGUSER || process.env.db_POSTGRES_USER || process.env.POSTGRES_USER || process.env.PGUSER,
+    password: process.env.db_PGPASSWORD || process.env.db_POSTGRES_PASSWORD || process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  };
+}
+
+// Create connection pool
+const pool = new Pool(getDatabaseConfig());
+
+// Test connection and log configuration
+pool.on("connect", (client) => {
+  console.log("✅ Database connected successfully");
+  console.log(`📊 Connected to: ${client.database} on ${client.host}:${client.port}`);
 });
 
 pool.on("error", (err) => {
-  console.error("Database connection error:", err);
+  console.error("❌ Database connection error:", err.message);
+  console.error("🔧 Check your environment variables and database configuration");
 });
+
+// Validate database connection on startup
+async function validateConnection() {
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW() as current_time, version() as postgres_version');
+    console.log("🔗 Database connection validated:");
+    console.log(`   Time: ${result.rows[0].current_time}`);
+    console.log(`   Version: ${result.rows[0].postgres_version.split(' ')[0]}`);
+    client.release();
+    return true;
+  } catch (error) {
+    console.error("❌ Database connection validation failed:", error.message);
+    console.error("🔧 Available environment variables:");
+    const dbVars = Object.keys(process.env).filter(key =>
+      key.includes('POSTGRES') || key.includes('DATABASE') || key.startsWith('db_') || key.startsWith('PG')
+    );
+    dbVars.forEach(key => {
+      const value = process.env[key];
+      if (value) {
+        // Mask password in logs
+        const maskedValue = key.toLowerCase().includes('password') || key.toLowerCase().includes('pass')
+          ? value.replace(/:[^:@]+@/, ':***@')
+          : value;
+        console.log(`   ${key}: ${maskedValue}`);
+      }
+    });
+    return false;
+  }
+}
 
 // SQL query helper
 async function query(text, params) {
@@ -90,4 +153,4 @@ async function initDatabase() {
   }
 }
 
-module.exports = { pool, query, initDatabase };
+module.exports = { pool, query, initDatabase, validateConnection };
