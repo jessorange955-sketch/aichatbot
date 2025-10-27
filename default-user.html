@@ -53,6 +53,47 @@
             min-height: 600px;
         }
 
+        .mobile-tabs {
+            display: none;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-buttons {
+            display: flex;
+            width: 100%;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button.active {
+            background: white;
+            border-bottom-color: #2196f3;
+            color: #2196f3;
+        }
+
+        .tab-button:not(.active) {
+            color: #666;
+        }
+
+        .mobile-panel {
+            display: none;
+        }
+
+        .mobile-panel.active {
+            display: block;
+        }
+
         .messages-panel {
             border: 2px solid #e0e0e0;
             border-radius: 10px;
@@ -69,6 +110,12 @@
 
         .messages-list {
             height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .mobile-messages-list {
+            max-height: 60vh;
             overflow-y: auto;
             padding: 10px;
         }
@@ -127,6 +174,13 @@
 
         .chat-history {
             height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            background: #fafafa;
+        }
+
+        .mobile-chat-history {
+            height: 40vh;
             overflow-y: auto;
             padding: 15px;
             background: #fafafa;
@@ -248,8 +302,136 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                border-radius: 10px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .header p {
+                font-size: 0.9rem;
+            }
+
             .main-content {
-                grid-template-columns: 1fr;
+                display: none;
+                /* Hide desktop layout */
+                padding: 0;
+            }
+
+            .mobile-tabs {
+                display: block;
+            }
+
+            .messages-panel,
+            .response-panel {
+                border: none;
+                border-radius: 0;
+            }
+
+            .panel-header {
+                padding: 12px 15px;
+                font-size: 0.9rem;
+            }
+
+            .message-item {
+                padding: 12px;
+                margin-bottom: 8px;
+            }
+
+            .message-text {
+                font-size: 0.9rem;
+            }
+
+            .chat-message {
+                margin-bottom: 12px;
+                padding: 8px 12px;
+                font-size: 0.9rem;
+            }
+
+            .response-input {
+                min-height: 60px;
+                font-size: 1rem;
+            }
+
+            .btn {
+                padding: 12px 16px;
+                font-size: 0.9rem;
+            }
+
+            .response-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .refresh-btn {
+                top: 10px;
+                right: 10px;
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+
+            .session-id {
+                font-size: 0.8rem;
+            }
+
+            .message-meta {
+                font-size: 0.8rem;
+            }
+
+            /* Make message items more touch-friendly */
+            .message-item {
+                min-height: 60px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            /* Improve touch targets */
+            .tab-button {
+                min-height: 48px;
+            }
+
+            /* Better spacing for mobile */
+            .mobile-panel {
+                padding-bottom: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 1.3rem;
+            }
+
+            .header p {
+                font-size: 0.8rem;
+            }
+
+            .panel-header {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+
+            .message-item {
+                padding: 10px;
+            }
+
+            .response-input {
+                min-height: 50px;
+            }
+
+            .btn {
+                padding: 10px 12px;
+                font-size: 0.85rem;
             }
         }
     </style>
@@ -305,6 +487,60 @@
                 </div>
             </div>
         </div>
+
+        <!-- Mobile Layout -->
+        <div class="mobile-tabs">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('messages')" id="messagesTab">
+                    📨 Messages <span id="mobileMessageCount"
+                        style="background: #ff6b6b; color: white; padding: 2px 6px; border-radius: 8px; margin-left: 5px;">0</span>
+                </button>
+                <button class="tab-button" onclick="switchTab('chat')" id="chatTab">
+                    💬 Chat
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Messages Panel -->
+        <div class="mobile-panel active" id="mobileMessagesPanel">
+            <div class="messages-panel">
+                <div class="mobile-messages-list" id="mobileMessagesList">
+                    <div style="text-align: center; color: #666; padding: 30px;">
+                        Loading messages...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Chat Panel -->
+        <div class="mobile-panel" id="mobileChatPanel">
+            <div class="response-panel">
+                <div class="panel-header">
+                    💬 Chat & Response
+                    <span id="mobileSelectedSession"
+                        style="float: right; font-family: monospace; background: #e0e0e0; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">No
+                        session</span>
+                </div>
+                <div class="mobile-chat-history" id="mobileChatHistory">
+                    <div style="text-align: center; color: #666; padding: 30px;">
+                        Select a message to view conversation
+                    </div>
+                </div>
+                <div class="response-form">
+                    <textarea id="mobileResponseText" class="response-input"
+                        placeholder="Type your response as the 'AI'..." disabled></textarea>
+                    <div class="response-buttons">
+                        <button class="btn btn-primary" onclick="sendMobileResponse()" disabled id="mobileSendBtn">
+                            🤖 Send as AI
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearMobileResponse()">
+                            🗑️ Clear
+                        </button>
+                    </div>
+                    <div id="mobileResponseStatus"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -336,18 +572,25 @@
 
         function displayMessages() {
             const messagesList = document.getElementById('messagesList');
+            const mobileMessagesList = document.getElementById('mobileMessagesList');
             const messageCount = document.getElementById('messageCount');
+            const mobileMessageCount = document.getElementById('mobileMessageCount');
 
             if (messages.length === 0) {
-                messagesList.innerHTML = '<div style="text-align: center; color: #666; padding: 50px;">No messages yet</div>';
+                const emptyMessage = '<div style="text-align: center; color: #666; padding: 50px;">No messages yet</div>';
+                const mobileEmptyMessage = '<div style="text-align: center; color: #666; padding: 30px;">No messages yet</div>';
+                messagesList.innerHTML = emptyMessage;
+                mobileMessagesList.innerHTML = mobileEmptyMessage;
                 messageCount.textContent = '0';
+                mobileMessageCount.textContent = '0';
                 return;
             }
 
             const needsResponseCount = messages.filter(m => m.needsResponse).length;
             messageCount.textContent = needsResponseCount;
+            mobileMessageCount.textContent = needsResponseCount;
 
-            messagesList.innerHTML = messages.map(message => `
+            const messageHTML = messages.map(message => `
                 <div class="message-item ${message.needsResponse ? 'needs-response' : ''}" 
                      onclick="selectMessage('${message.sessionId}')">
                     <div class="message-meta">
@@ -361,6 +604,24 @@
                     </div>
                 </div>
             `).join('');
+
+            const mobileMessageHTML = messages.map(message => `
+                <div class="message-item ${message.needsResponse ? 'needs-response' : ''}" 
+                     onclick="selectMobileMessage('${message.sessionId}')">
+                    <div class="message-meta">
+                        <span class="session-id">${message.sessionId.substring(0, 8)}...</span>
+                        <span>${new Date(message.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-text">${message.text}</div>
+                    <div style="font-size: 0.75rem; color: #666; margin-top: 5px;">
+                        ${message.userMessageCount}/${message.responseCount}
+                        ${message.needsResponse ? '<span style="color: #ff6b6b; font-weight: bold;">• NEW</span>' : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            messagesList.innerHTML = messageHTML;
+            mobileMessagesList.innerHTML = mobileMessageHTML;
         }
 
         async function selectMessage(sessionId) {
@@ -386,13 +647,17 @@
 
         function displayChatHistory(chatMessages) {
             const chatHistory = document.getElementById('chatHistory');
+            const mobileChatHistory = document.getElementById('mobileChatHistory');
 
             if (chatMessages.length === 0) {
-                chatHistory.innerHTML = '<div style="text-align: center; color: #666; padding: 50px;">No messages in this conversation</div>';
+                const emptyMessage = '<div style="text-align: center; color: #666; padding: 50px;">No messages in this conversation</div>';
+                const mobileEmptyMessage = '<div style="text-align: center; color: #666; padding: 30px;">No messages in this conversation</div>';
+                chatHistory.innerHTML = emptyMessage;
+                mobileChatHistory.innerHTML = mobileEmptyMessage;
                 return;
             }
 
-            chatHistory.innerHTML = chatMessages.map(msg => `
+            const messageHTML = chatMessages.map(msg => `
                 <div class="chat-message ${msg.sender}">
                     <div class="message-sender">${msg.sender === 'user' ? '👤 User' : '🤖 AI (You)'}</div>
                     <div>${msg.text}</div>
@@ -402,8 +667,12 @@
                 </div>
             `).join('');
 
+            chatHistory.innerHTML = messageHTML;
+            mobileChatHistory.innerHTML = messageHTML;
+
             // Scroll to bottom
             chatHistory.scrollTop = chatHistory.scrollHeight;
+            mobileChatHistory.scrollTop = mobileChatHistory.scrollHeight;
         }
 
         async function sendResponse() {
@@ -463,6 +732,97 @@
             if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();
                 sendResponse();
+            }
+        });
+
+        // Mobile-specific functions
+        function switchTab(tab) {
+            const messagesTab = document.getElementById('messagesTab');
+            const chatTab = document.getElementById('chatTab');
+            const messagesPanel = document.getElementById('mobileMessagesPanel');
+            const chatPanel = document.getElementById('mobileChatPanel');
+
+            if (tab === 'messages') {
+                messagesTab.classList.add('active');
+                chatTab.classList.remove('active');
+                messagesPanel.classList.add('active');
+                chatPanel.classList.remove('active');
+            } else {
+                messagesTab.classList.remove('active');
+                chatTab.classList.add('active');
+                messagesPanel.classList.remove('active');
+                chatPanel.classList.add('active');
+            }
+        }
+
+        function selectMobileMessage(sessionId) {
+            // Switch to chat tab and select message
+            switchTab('chat');
+            selectMessage(sessionId);
+
+            // Update mobile-specific elements
+            document.getElementById('mobileSelectedSession').textContent = sessionId.substring(0, 15) + '...';
+            document.getElementById('mobileResponseText').disabled = false;
+            document.getElementById('mobileSendBtn').disabled = false;
+        }
+
+        async function sendMobileResponse() {
+            const responseText = document.getElementById('mobileResponseText').value.trim();
+            const statusDiv = document.getElementById('mobileResponseStatus');
+
+            if (!responseText) {
+                statusDiv.innerHTML = '<div class="status error">Please enter a response</div>';
+                return;
+            }
+
+            if (!currentSessionId) {
+                statusDiv.innerHTML = '<div class="status error">Please select a session first</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/default/respond', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sessionId: currentSessionId,
+                        message: responseText
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    statusDiv.innerHTML = '<div class="status success">Response sent! 🎉</div>';
+                    document.getElementById('mobileResponseText').value = '';
+
+                    // Refresh and update
+                    setTimeout(() => {
+                        selectMessage(currentSessionId);
+                        loadMessages();
+                        statusDiv.innerHTML = '';
+                    }, 1000);
+                } else {
+                    statusDiv.innerHTML = `<div class="status error">Failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                console.error('Error sending mobile response:', error);
+                statusDiv.innerHTML = '<div class="status error">Network error</div>';
+            }
+        }
+
+        function clearMobileResponse() {
+            document.getElementById('mobileResponseText').value = '';
+            document.getElementById('mobileResponseStatus').innerHTML = '';
+        }
+
+        // Mobile keyboard shortcuts
+        document.getElementById('mobileResponseText').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                sendMobileResponse();
             }
         });
     </script>

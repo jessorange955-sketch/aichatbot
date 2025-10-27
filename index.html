@@ -136,16 +136,8 @@
                 </div>
             </div>
             <div class="flex items-center space-x-3">
-                <div id="user-info" class="hidden">
-                    <div class="flex items-center space-x-2">
-                        <span id="username-display" class="text-xs text-gray-300"></span>
-                        <button id="logout-btn" class="text-xs text-red-400 hover:text-red-300">Logout</button>
-                    </div>
-                </div>
-                <div id="auth-links" class="flex items-center space-x-2">
-                    <a href="login.html" class="text-xs text-blue-400 hover:text-blue-300">Login</a>
-                    <span class="text-gray-500">|</span>
-                    <a href="register.html" class="text-xs text-green-400 hover:text-green-300">Register</a>
+                <div class="text-xs text-gray-300">
+                    <span class="text-green-400">●</span> Anonymous Chat
                 </div>
             </div>
         </div>
@@ -276,7 +268,6 @@
                 this.lastMessageId = 0;
                 this.pollingInterval = null;
 
-                this.checkAuth();
                 this.initializeEventListeners();
                 this.loadChatHistory();
                 this.startPolling();
