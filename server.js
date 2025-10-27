@@ -1,5 +1,5 @@
 const express = require('express');
-const { sql, initDatabase } = require('./db');
+const { query, initDatabase } = require('./db');
 const path = require('path');
 const bodyParser = require('body-parser');
 const session = require('express-session');
@@ -55,17 +55,19 @@ app.post('/api/auth/register', async (req, res) => {
     }
     
     try {
-        const existingUser = await sql`SELECT * FROM users WHERE username = ${username}`;
+        const existingUser = await query(
+            'SELECT * FROM users WHERE username = $1',
+            [username]
+        );
         
         if (existingUser.rows.length > 0) {
             return res.json({ success: false, message: 'Username already exists' });
         }
         
-        const result = await sql`
-            INSERT INTO users (username, password, role) 
-            VALUES (${username}, ${password}, 'user')
-            RETURNING id
-        `;
+        const result = await query(
+            'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id',
+            [username, password, 'user']
+        );
         
         const userId = result.rows[0].id;
         
@@ -99,10 +101,10 @@ app.post('/api/auth/login', async (req, res) => {
     }
     
     try {
-        const result = await sql`
-            SELECT * FROM users 
-            WHERE username = ${username} AND password = ${password}
-        `;
+        const result = await query(
+            'SELECT * FROM users WHERE username = $1 AND password = $2',
+            [username, password]
+        );
         
         if (result.rows.length > 0) {
             const user = result.rows[0];
@@ -169,22 +171,30 @@ app.post('/api/chat/send', async (req, res) => {
     
     try {
         // Check if session exists
-        const sessionCheck = await sql`SELECT id FROM sessions WHERE id = ${sessionId}`;
+        const sessionCheck = await query(
+            'SELECT id FROM sessions WHERE id = $1',
+            [sessionId]
+        );
         
         // Create session if it doesn't exist
         if (sessionCheck.rows.length === 0) {
-            await sql`INSERT INTO sessions (id, is_active) VALUES (${sessionId}, true)`;
+            await query(
+                'INSERT INTO sessions (id, is_active) VALUES ($1, true)',
+                [sessionId]
+            );
         }
         
         // Store user message
-        const result = await sql`
-            INSERT INTO messages (session_id, sender, text) 
-            VALUES (${sessionId}, 'user', ${message})
-            RETURNING id
-        `;
+        const result = await query(
+            'INSERT INTO messages (session_id, sender, text) VALUES ($1, $2, $3) RETURNING id',
+            [sessionId, 'user', message]
+        );
         
         // Update session last active time
-        await sql`UPDATE sessions SET last_active = CURRENT_TIMESTAMP WHERE id = ${sessionId}`;
+        await query(
+            'UPDATE sessions SET last_active = CURRENT_TIMESTAMP WHERE id = $1',
+            [sessionId]
+        );
         
         // Simulate AI response
         setTimeout(async () => {
@@ -204,10 +214,10 @@ app.post('/api/chat/send', async (req, res) => {
             const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
             
             try {
-                await sql`
-                    INSERT INTO messages (session_id, sender, text) 
-                    VALUES (${sessionId}, 'ai', ${randomResponse})
-                `;
+                await query(
+                    'INSERT INTO messages (session_id, sender, text) VALUES ($1, $2, $3)',
+                    [sessionId, 'ai', randomResponse]
+                );
             } catch (error) {
                 console.error('Error storing AI response:', error);
             }
@@ -263,17 +273,15 @@ app.get('/api/chat/new-messages', async (req, res) => {
     try {
         let result;
         if (lastMessageId) {
-            result = await sql`
-                SELECT * FROM messages 
-                WHERE session_id = ${sessionId} AND id > ${lastMessageId}
-                ORDER BY timestamp ASC
-            `;
+            result = await query(
+                'SELECT * FROM messages WHERE session_id = $1 AND id > $2 ORDER BY timestamp ASC',
+                [sessionId, lastMessageId]
+            );
         } else {
-            result = await sql`
-                SELECT * FROM messages 
-                WHERE session_id = ${sessionId}
-                ORDER BY timestamp ASC
-            `;
+            result = await query(
+                'SELECT * FROM messages WHERE session_id = $1 ORDER BY timestamp ASC',
+                [sessionId]
+            );
         }
         
         res.json({ 
@@ -297,7 +305,10 @@ app.post('/api/session/create', async (req, res) => {
     const finalSessionId = sessionId || 'session_' + Math.random().toString(36).substr(2, 9);
     
     try {
-        await sql`INSERT INTO sessions (id, is_active) VALUES (${finalSessionId}, true)`;
+        await query(
+            'INSERT INTO sessions (id, is_active) VALUES ($1, true)',
+            [finalSessionId]
+        );
         
         res.json({ 
             success: true, 
@@ -312,7 +323,7 @@ app.post('/api/session/create', async (req, res) => {
 // Admin routes
 app.get('/api/admin/sessions', requireAuth, async (req, res) => {
     try {
-        const sessions = await sql`
+        const sessions = await query(`
             SELECT 
                 s.id,
                 s.created_at,
@@ -324,13 +335,12 @@ app.get('/api/admin/sessions', requireAuth, async (req, res) => {
             WHERE s.is_active = true
             GROUP BY s.id, s.created_at, s.last_active
             ORDER BY s.last_active DESC
-        `;
+        `);
         
-        const totalSessions = await sql`SELECT COUNT(*) as count FROM sessions`;
-        const messagesToday = await sql`
-            SELECT COUNT(*) as count FROM messages 
-            WHERE DATE(timestamp) = CURRENT_DATE
-        `;
+        const totalSessions = await query('SELECT COUNT(*) as count FROM sessions');
+        const messagesToday = await query(
+            'SELECT COUNT(*) as count FROM messages WHERE DATE(timestamp) = CURRENT_DATE'
+        );
         
         res.json({ 
             success: true, 
@@ -360,11 +370,10 @@ app.get('/api/admin/chat-history', requireAuth, async (req, res) => {
     }
     
     try {
-        const result = await sql`
-            SELECT * FROM messages 
-            WHERE session_id = ${sessionId} 
-            ORDER BY timestamp ASC
-        `;
+        const result = await query(
+            'SELECT * FROM messages WHERE session_id = $1 ORDER BY timestamp ASC',
+            [sessionId]
+        );
         
         res.json({ 
             success: true, 
@@ -389,13 +398,15 @@ app.post('/api/admin/send-message', requireAuth, async (req, res) => {
     }
     
     try {
-        const result = await sql`
-            INSERT INTO messages (session_id, sender, text) 
-            VALUES (${sessionId}, 'admin', ${message})
-            RETURNING id
-        `;
+        const result = await query(
+            'INSERT INTO messages (session_id, sender, text) VALUES ($1, $2, $3) RETURNING id',
+            [sessionId, 'admin', message]
+        );
         
-        await sql`UPDATE sessions SET last_active = CURRENT_TIMESTAMP WHERE id = ${sessionId}`;
+        await query(
+            'UPDATE sessions SET last_active = CURRENT_TIMESTAMP WHERE id = $1',
+            [sessionId]
+        );
         
         res.json({ 
             success: true, 
@@ -415,7 +426,10 @@ app.post('/api/admin/end-session', requireAuth, async (req, res) => {
     }
     
     try {
-        await sql`UPDATE sessions SET is_active = false WHERE id = ${sessionId}`;
+        await query(
+            'UPDATE sessions SET is_active = false WHERE id = $1',
+            [sessionId]
+        );
         
         res.json({ 
             success: true, 
