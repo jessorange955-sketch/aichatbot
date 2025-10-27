@@ -291,32 +291,20 @@ app.post('/api/chat/send', async (req, res) => {
             [sessionId]
         );
 
-        // Simulate AI response
+        // Notify default user about new message (this is the prank - messages go to default user)
+        console.log(`📨 New message from session ${sessionId}: "${message}"`);
+
+        // Optional: Send a quick acknowledgment that the "AI" is processing
         setTimeout(async () => {
-            const aiResponses = [
-                "That's an interesting question. Let me think about that...",
-                "I understand what you're asking. Here's my perspective...",
-                "Based on my analysis, I would say...",
-                "That's a great point! Let me elaborate...",
-                "I can help you with that. Here's what I recommend...",
-                "From my understanding, the answer would be...",
-                "That's fascinating! Here's what I think...",
-                "Let me process that information for you...",
-                "I see what you mean. Here's my take...",
-                "That's a complex question. Allow me to explain..."
-            ];
-
-            const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
-
             try {
                 await query(
                     'INSERT INTO messages (session_id, sender, text) VALUES ($1, $2, $3)',
-                    [sessionId, 'ai', randomResponse]
+                    [sessionId, 'ai', 'I received your message and I\'m thinking about it... 🤔']
                 );
             } catch (error) {
-                console.error('Error storing AI response:', error);
+                console.error('Error storing acknowledgment:', error);
             }
-        }, 1000 + Math.random() * 3000);
+        }, 1000 + Math.random() * 2000);
 
         res.json({
             success: true,
@@ -411,6 +399,105 @@ app.post('/api/session/create', async (req, res) => {
     } catch (error) {
         console.error('Error creating session:', error);
         res.json({ success: false, message: 'Failed to create session' });
+    }
+});
+
+// Default user (prank) routes - for the person receiving all messages
+app.get('/api/default/pending-messages', async (req, res) => {
+    try {
+        // Get all recent messages from users (not from 'ai' or 'admin' or 'defaultuser')
+        const result = await query(`
+            SELECT 
+                m.id,
+                m.session_id,
+                m.text,
+                m.timestamp,
+                m.sender,
+                s.created_at as session_created,
+                (SELECT COUNT(*) FROM messages WHERE session_id = m.session_id AND sender = 'user') as user_message_count,
+                (SELECT COUNT(*) FROM messages WHERE session_id = m.session_id AND sender IN ('ai', 'admin', 'defaultuser')) as response_count
+            FROM messages m
+            JOIN sessions s ON m.session_id = s.id
+            WHERE m.sender = 'user' 
+            AND s.is_active = true
+            ORDER BY m.timestamp DESC
+            LIMIT 50
+        `);
+
+        res.json({
+            success: true,
+            messages: result.rows.map(row => ({
+                id: row.id,
+                sessionId: row.session_id,
+                text: row.text,
+                timestamp: row.timestamp,
+                sender: row.sender,
+                sessionCreated: row.session_created,
+                userMessageCount: parseInt(row.user_message_count),
+                responseCount: parseInt(row.response_count),
+                needsResponse: parseInt(row.response_count) < parseInt(row.user_message_count)
+            }))
+        });
+    } catch (error) {
+        console.error('Error loading pending messages:', error);
+        res.json({ success: false, message: 'Database error' });
+    }
+});
+
+app.post('/api/default/respond', async (req, res) => {
+    const { sessionId, message } = req.body;
+
+    if (!sessionId || !message) {
+        return res.json({ success: false, message: 'Session ID and message required' });
+    }
+
+    try {
+        // Store the response as an 'ai' message so it appears as AI to the user
+        const result = await query(
+            'INSERT INTO messages (session_id, sender, text) VALUES ($1, $2, $3) RETURNING id',
+            [sessionId, 'ai', message]
+        );
+
+        // Update session last active time
+        await query(
+            'UPDATE sessions SET last_active = CURRENT_TIMESTAMP WHERE id = $1',
+            [sessionId]
+        );
+
+        console.log(`🤖 Default user responded to session ${sessionId}: "${message}"`);
+
+        res.json({
+            success: true,
+            messageId: result.rows[0].id,
+            message: 'Response sent successfully'
+        });
+    } catch (error) {
+        console.error('Error sending default user response:', error);
+        res.json({ success: false, message: 'Failed to send response' });
+    }
+});
+
+app.get('/api/default/session-history/:sessionId', async (req, res) => {
+    const { sessionId } = req.params;
+
+    try {
+        const result = await query(
+            'SELECT * FROM messages WHERE session_id = $1 ORDER BY timestamp ASC',
+            [sessionId]
+        );
+
+        res.json({
+            success: true,
+            messages: result.rows.map(row => ({
+                id: row.id,
+                text: row.text,
+                sender: row.sender,
+                timestamp: row.timestamp
+            }))
+        });
+    } catch (error) {
+        console.error('Error loading session history:', error);
+        res.json({ success: false, message: 'Database error' });
     }
 });
 
@@ -546,6 +633,10 @@ app.get('/login.html', (req, res) => {
 
 app.get('/register.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'register.html'));
+});
+
+app.get('/default-user.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'default-user.html'));
 });
 
 app.get('/dashboard.html', requireAuth, (req, res) => {
