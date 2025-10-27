@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - AI Chat Bot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .form-input {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .register-button {
+            background: linear-gradient(135deg, #10b981, #059669);
+            transition: all 0.3s ease;
+        }
+
+        .register-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .register-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .success-message {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+    </style>
+</head>
+
+<body class="text-white">
+    <div class="w-full max-w-md px-4">
+        <div class="glass-morphism rounded-2xl p-8 shadow-2xl">
+            <div class="text-center mb-8">
+                <div
+                    class="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold mb-2">Create Account</h1>
+                <p class="text-gray-300 text-sm">Join our AI chat platform</p>
+            </div>
+
+            <form id="register-form" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium mb-2">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Choose a username"
+                        class="form-input w-full px-4 py-3 rounded-lg text-white placeholder-gray-400" required
+                        minlength="3">
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium mb-2">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Create a password"
+                        class="form-input w-full px-4 py-3 rounded-lg text-white placeholder-gray-400" required
+                        minlength="6">
+                </div>
+
+                <div>
+                    <label for="confirm-password" class="block text-sm font-medium mb-2">Confirm Password</label>
+                    <input type="password" id="confirm-password" name="confirm-password"
+                        placeholder="Confirm your password"
+                        class="form-input w-full px-4 py-3 rounded-lg text-white placeholder-gray-400" required
+                        minlength="6">
+                </div>
+
+                <button type="submit" id="register-button"
+                    class="register-button w-full py-3 px-4 rounded-lg text-white font-semibold">
+                    <span id="button-text">Create Account</span>
+                    <span id="button-loading" class="hidden">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        Creating account...
+                    </span>
+                </button>
+            </form>
+
+            <div id="message-area" class="mt-4 hidden"></div>
+
+            <div class="text-center mt-6">
+                <p class="text-sm text-gray-300">
+                    Already have an account?
+                    <a href="login.html" class="text-blue-400 hover:text-blue-300">Sign in</a>
+                </p>
+                <a href="index.html" class="text-sm text-blue-400 hover:text-blue-300 block mt-2">
+                    ← Back to AI Chat
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="register.js"></script>
+</body>
+
+</html>

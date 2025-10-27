@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Bot - Advanced Conversational AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.12/typed.min.js"></script>
+    <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/splitting@1.0.6/dist/splitting.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .message-bubble {
+            animation: slideInUp 0.5s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        @keyframes slideInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .typing-indicator {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .neural-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .chat-container {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(139, 92, 246, 0.5) transparent;
+        }
+
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.5);
+            border-radius: 3px;
+        }
+
+        .ai-avatar {
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+            transition: all 0.3s ease;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+        }
+
+        .message-input {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+        }
+    </style>
+</head>
+
+<body class="text-white">
+    <!-- Neural Network Background -->
+    <div id="neural-bg" class="neural-bg"></div>
+
+    <!-- Header -->
+    <header class="glass-morphism p-4 mb-4">
+        <div class="flex items-center justify-between max-w-md mx-auto">
+            <div class="flex items-center space-x-3">
+                <div class="ai-avatar w-10 h-10 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-semibold">AI Assistant</h1>
+                    <p class="text-xs text-green-400">Online</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <div id="user-info" class="hidden">
+                    <div class="flex items-center space-x-2">
+                        <span id="username-display" class="text-xs text-gray-300"></span>
+                        <button id="logout-btn" class="text-xs text-red-400 hover:text-red-300">Logout</button>
+                    </div>
+                </div>
+                <div id="auth-links" class="flex items-center space-x-2">
+                    <a href="login.html" class="text-xs text-blue-400 hover:text-blue-300">Login</a>
+                    <span class="text-gray-500">|</span>
+                    <a href="register.html" class="text-xs text-green-400 hover:text-green-300">Register</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Chat Container -->
+    <div class="max-w-md mx-auto px-4">
+        <div id="chat-container" class="chat-container space-y-4 mb-4">
+            <!-- Welcome Message -->
+            <div class="message-bubble flex items-start space-x-3">
+                <div class="ai-avatar w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="glass-morphism rounded-lg p-3 max-w-xs">
+                    <p class="text-sm">Hello! I'm your advanced AI assistant. I'm here to help you with any questions or
+                        tasks you have. How can I assist you today?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typing-indicator" class="hidden flex items-center space-x-2 mb-4">
+            <div class="ai-avatar w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="glass-morphism rounded-lg p-3">
+                <div class="flex space-x-1">
+                    <div class="typing-indicator w-2 h-2 bg-white rounded-full"></div>
+                    <div class="typing-indicator w-2 h-2 bg-white rounded-full" style="animation-delay: 0.2s;"></div>
+                    <div class="typing-indicator w-2 h-2 bg-white rounded-full" style="animation-delay: 0.4s;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="flex items-center space-x-3 mb-4">
+            <input type="text" id="message-input" placeholder="Type your message..."
+                class="message-input flex-1 px-4 py-3 rounded-full text-white placeholder-gray-400" maxlength="500">
+            <button id="send-button"
+                class="send-button w-12 h-12 rounded-full flex items-center justify-center text-white">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                        d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center text-xs text-gray-400 pb-4">
+            <p>Powered by Advanced AI Technology</p>
+        </footer>
+    </div>
+
+    <script>
+        // Neural Network Background Animation
+        let particles = [];
+        let connections = [];
+
+        function setup() {
+            let canvas = createCanvas(windowWidth, windowHeight);
+            canvas.parent('neural-bg');
+
+            // Create particles
+            for (let i = 0; i < 50; i++) {
+                particles.push({
+                    x: random(width),
+                    y: random(height),
+                    vx: random(-0.5, 0.5),
+                    vy: random(-0.5, 0.5),
+                    size: random(2, 4)
+                });
+            }
+        }
+
+        function draw() {
+            clear();
+
+            // Update and draw particles
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Wrap around edges
+                if (p.x < 0) p.x = width;
+                if (p.x > width) p.x = 0;
+                if (p.y < 0) p.y = height;
+                if (p.y > height) p.y = 0;
+
+                // Draw particle
+                fill(139, 92, 246, 100);
+                noStroke();
+                ellipse(p.x, p.y, p.size);
+
+                // Draw connections
+                for (let j = i + 1; j < particles.length; j++) {
+                    let p2 = particles[j];
+                    let distance = dist(p.x, p.y, p2.x, p2.y);
+
+                    if (distance < 100) {
+                        let alpha = map(distance, 0, 100, 50, 0);
+                        stroke(139, 92, 246, alpha);
+                        strokeWeight(1);
+                        line(p.x, p.y, p2.x, p2.y);
+                    }
+                }
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+
+        // Chat functionality
+        class ChatApp {
+            constructor() {
+                this.messageInput = document.getElementById('message-input');
+                this.sendButton = document.getElementById('send-button');
+                this.chatContainer = document.getElementById('chat-container');
+                this.typingIndicator = document.getElementById('typing-indicator');
+                this.sessionId = this.generateSessionId();
+                this.lastMessageId = 0;
+                this.pollingInterval = null;
+
+                this.checkAuth();
+                this.initializeEventListeners();
+                this.loadChatHistory();
+                this.startPolling();
+            }
+
+            generateSessionId() {
+                return 'session_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            async checkAuth() {
+                try {
+                    const response = await fetch('/api/auth/check');
+                    const data = await response.json();
+
+                    if (data.authenticated) {
+                        document.getElementById('user-info').classList.remove('hidden');
+                        document.getElementById('auth-links').classList.add('hidden');
+                        document.getElementById('username-display').textContent = data.user.username;
+
+                        const logoutBtn = document.getElementById('logout-btn');
+                        if (logoutBtn) {
+                            logoutBtn.addEventListener('click', () => this.logout());
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking auth:', error);
+                }
+            }
+
+            async logout() {
+                try {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Error logging out:', error);
+                }
+            }
+
+            initializeEventListeners() {
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+
+                // Auto-resize input
+                this.messageInput.addEventListener('input', () => {
+                    this.messageInput.style.height = 'auto';
+                    this.messageInput.style.height = this.messageInput.scrollHeight + 'px';
+                });
+            }
+
+            async sendMessage() {
+                const message = this.messageInput.value.trim();
+                if (!message) return;
+
+                // Add user message to chat
+                this.addMessage(message, 'user');
+                this.messageInput.value = '';
+
+                // Show typing indicator
+                this.showTypingIndicator();
+
+                // Send message to server
+                try {
+                    const response = await fetch('/api/chat/send', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            sessionId: this.sessionId
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.messageId) {
+                        this.lastMessageId = data.messageId;
+                    }
+
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    this.hideTypingIndicator();
+                    this.addMessage("I'm having trouble connecting right now. Please try again.", 'ai');
+                }
+            }
+
+            addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message-bubble flex items-start space-x-3';
+
+                if (sender === 'user') {
+                    messageDiv.innerHTML = `
+                        <div class="flex-1"></div>
+                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-3 max-w-xs ml-3">
+                            <p class="text-sm">${text}</p>
+                        </div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="ai-avatar w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="glass-morphism rounded-lg p-3 max-w-xs">
+                            <p class="text-sm">${text}</p>
+                        </div>
+                    `;
+                }
+
+                this.chatContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+
+                // Animate message appearance
+                anime({
+                    targets: messageDiv,
+                    opacity: [0, 1],
+                    translateY: [20, 0],
+                    duration: 500,
+                    easing: 'easeOutQuart'
+                });
+            }
+
+            showTypingIndicator() {
+                this.typingIndicator.classList.remove('hidden');
+                this.scrollToBottom();
+            }
+
+            hideTypingIndicator() {
+                this.typingIndicator.classList.add('hidden');
+            }
+
+            scrollToBottom() {
+                this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+            }
+
+            async loadChatHistory() {
+                try {
+                    const response = await fetch(`/api/chat/history?sessionId=${this.sessionId}`);
+                    const data = await response.json();
+
+                    if (data.messages && data.messages.length > 0) {
+                        data.messages.forEach(msg => {
+                            this.addMessage(msg.text, msg.sender);
+                            this.lastMessageId = Math.max(this.lastMessageId, msg.id);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading chat history:', error);
+                }
+            }
+
+            startPolling() {
+                this.pollingInterval = setInterval(() => {
+                    this.checkNewMessages();
+                }, 2000);
+            }
+
+            async checkNewMessages() {
+                try {
+                    const response = await fetch(`/api/chat/new-messages?sessionId=${this.sessionId}&lastMessageId=${this.lastMessageId}`);
+                    const data = await response.json();
+
+                    if (data.success && data.messages && data.messages.length > 0) {
+                        data.messages.forEach(msg => {
+                            if (msg.id > this.lastMessageId) {
+                                this.hideTypingIndicator();
+                                this.addMessage(msg.text, msg.sender);
+                                this.lastMessageId = msg.id;
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error checking new messages:', error);
+                }
+            }
+        }
+
+        // Initialize chat app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new ChatApp();
+
+            // Add some initial AI personality with typing effect
+            setTimeout(() => {
+                const welcomeMessages = [
+                    "I'm designed to assist with a wide range of tasks and questions.",
+                    "Feel free to ask me anything - I'm here to help!",
+                    "I can provide information, answer questions, and engage in meaningful conversations."
+                ];
+
+                let messageIndex = 0;
+                const sendWelcomeMessage = () => {
+                    if (messageIndex < welcomeMessages.length) {
+                        setTimeout(() => {
+                            const chatApp = new ChatApp();
+                            chatApp.addMessage(welcomeMessages[messageIndex], 'ai');
+                            messageIndex++;
+                            sendWelcomeMessage();
+                        }, 3000);
+                    }
+                };
+
+                // Don't send additional welcome messages automatically
+                // The initial message is enough
+            }, 2000);
+        });
+    </script>
+</body>
+
+</html>
